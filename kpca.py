@@ -8,13 +8,16 @@ from sklearn.metrics import pairwise_kernels
 class Kernel:
 
     def __init__(self, kernel_type, gamma, degree):
-        self.kernel_name = kernel_type
-        self.gamma = gamma
-        self.degree = degree
+        self.kernel_type = kernel_type
         self.kernels = {
             'rbf': self.rbf_kernel,
             'poly': self.poly_kernel,
             'linear': self.linear_kernel
+        }
+        self.kernels_params = {
+            'rbf': {'gamma': gamma},
+            'poly': {'gamma': gamma, 'degree': degree},
+            'linear': {}
         }
 
     def get_kernel(self, x):
@@ -22,9 +25,16 @@ class Kernel:
         Return kernel matrix computed on x using specific kernel.
         Available kernel types: rbf, linear, poly
         """
-        return self.kernels.get(self.kernel_name)(x)
+        return self.kernels.get(self.kernel_type)(x, **self.get_specific_kernel_params())
 
-    def rbf_kernel(self, x):
+    def get_specific_kernel_params(self):
+        """
+        Return specific kernel param. Ex. for `rbf` kernel - gamma
+        """
+        return self.kernels_params.get(self.kernel_type)
+
+    @staticmethod
+    def rbf_kernel(x, gamma):
         """
         Gaussian kernel
         :param x: data
@@ -32,19 +42,21 @@ class Kernel:
         """
         sq_dists = pdist(x, 'sqeuclidean')
         mat_sq_dists = squareform(sq_dists)
-        kernel = -self.gamma * mat_sq_dists
+        kernel = -gamma * mat_sq_dists
         np.exp(kernel, kernel)
         return kernel
 
-    def poly_kernel(self, x):
+    @staticmethod
+    def poly_kernel(x, gamma, degree):
         """
         Polynomial kernel
         :param x: data
         :return: kernel matrix
         """
-        return matrix_power(x.dot(x.T) + self.gamma, self.degree)
+        return matrix_power(x.dot(x.T) + gamma, degree)
 
-    def linear_kernel(self, x):
+    @staticmethod
+    def linear_kernel(x):
         """
         Linear kernel
         :param x: data
@@ -66,7 +78,7 @@ class KernelPCA:
         self.n_components = n_components
 
     def _center_kernel(self):
-        """ Centralizing kernel matrix. """
+        """ Centralizing kernel matrix. Can be used for square kernel matrix only. """
         n = self.kernel_matrix.shape[0]
         one_n = np.ones((n, n)) / n
         self.kernel_matrix -= one_n.dot(self.kernel_matrix)
@@ -74,7 +86,7 @@ class KernelPCA:
         self.kernel_matrix += one_n.dot(self.kernel_matrix).dot(one_n)
 
     def _kernel_centerer_from_scikit_learn(self):
-        """ Kernel centerer taken from scikit-learn lib. """
+        """ Kernel centerer taken from scikit-learn lib. Can be used for non-square kernel matrix. """
         n_samples = self.kernel_matrix.shape[0]
         self.K_fit_rows_ = np.sum(self.kernel_matrix, axis=0) / n_samples
         self.K_fit_all_ = self.K_fit_rows_.sum() / n_samples
@@ -103,13 +115,18 @@ class KernelPCA:
         # return projection
         return np.dot(self.kernel_matrix, self.eigenvectors / np.sqrt(self.eigenvalues))
 
-    def get_contour(self, x):
+    def get_out_of_sample_projection(self, new_data):
         """
-        Compute contours. Compute pairwise kernel matrix from already fitted and new x.
-        Project new data `x` onto existing principal components.
+        Compute projection of new data. Compute pairwise kernel matrix from already fitted and new data.
+        Project new data onto existing principal components.
         """
         if self.fitted is None:
             raise Exception("KPCA is not fitted")
-        self.kernel_matrix = pairwise_kernels(self.fitted, x, metric=self.kernel.kernel_name, gamma=self.gamma).T
+        self.kernel_matrix = pairwise_kernels(
+            self.fitted,
+            Y=new_data,
+            metric=self.kernel.kernel_type,
+            **self.kernel.get_specific_kernel_params()
+        )
         self._kernel_centerer_from_scikit_learn()
-        return np.dot(self.kernel_matrix, self.eigenvectors / np.sqrt(self.eigenvalues))
+        return np.dot(self.kernel_matrix.T, self.eigenvectors / np.sqrt(self.eigenvalues))
