@@ -1,6 +1,8 @@
 import numpy as np
-from sklearn.datasets import make_moons, make_circles
 import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
+from mpl_toolkits.mplot3d import Axes3D
+from sklearn.datasets import make_moons, make_circles
 
 from kpca import KernelPCA
 
@@ -41,9 +43,9 @@ def plot_projected_1_dim_data(X_kpca, y):
 
 if __name__ == '__main__':
     np.random.seed(0)
-    X_1, y_1 = make_circles(n_samples=400, factor=.3, noise=.05)
+    X_1, y_1 = make_circles(n_samples=400, factor=.4, noise=.05)
 
-    X_2, y_2 = make_moons(n_samples=100, noise=0)
+    X_2, y_2 = make_moons(n_samples=100, noise=.01)
 
     kpca_1 = KernelPCA(kernel='rbf', gamma=10, degree=2, n_components=2)
     X_kpca_1 = kpca_1.get_projection(X_1)
@@ -52,18 +54,18 @@ if __name__ == '__main__':
     X_kpca_2 = kpca_2.get_projection(X_2)
 
     plt.figure()
-    plt.subplot(3, 3, 1, aspect='equal')
-    # plot original space with contour
-    plot_original_2_dim_data(X_1, y_1)
-    plot_contour(kpca_1)
-
-    # plot kpca projection
-    plt.subplot(3, 3, 2, aspect='equal')
-    plot_projected_2_dim_data(X_kpca_1, y_1)
-
-    # plot kpca projection
-    plt.subplot(3, 3, 3, aspect='equal')
-    plot_projected_1_dim_data(X_kpca_1, y_1)
+    # plt.subplot(3, 3, 1, aspect='equal')
+    # # plot original space with contour
+    # plot_original_2_dim_data(X_1, y_1)
+    # plot_contour(kpca_1)
+    #
+    # # plot kpca projection
+    # plt.subplot(3, 3, 2, aspect='equal')
+    # plot_projected_2_dim_data(X_kpca_1, y_1)
+    #
+    # # plot kpca projection
+    # plt.subplot(3, 3, 3, aspect='equal')
+    # plot_projected_1_dim_data(X_kpca_1, y_1)
 
     plt.subplot(3, 3, 4, aspect='equal')
     # plot original space with contour
@@ -80,30 +82,53 @@ if __name__ == '__main__':
     plt.subplots_adjust(0.02, 0.10, 0.98, 0.94, 0.04, 0.35)
     plt.show()
 
-    # plot 3 circles
-    # plt.figure()
-    # X_11, y_11 = make_circles(n_samples=400, factor=.5, noise=.05)
-    # X_1 = np.concatenate((X_1, X_11[y_11 == 1, :]), axis=0)
-    # y_11[y_11 == 1] = 2
-    # y_1 = np.concatenate((y_1, y_11[y_11 == 2]), axis=0)
-    # X_kpca_1 = kpca_1.get_projection(X_1)
-    # plt.subplot(1, 2,1)
-    # plt.scatter(X_1[y_1 == 0, 0], X_1[y_1 == 0, 1], c="red", s=20, edgecolor='k', alpha=0.8)
-    # plt.scatter(X_1[y_1 == 1, 0], X_1[y_1 == 1, 1], c="blue", s=20, edgecolor='k', alpha=0.8)
-    # plt.scatter(X_1[y_1 == 2, 0], X_1[y_1 == 2, 1], c="yellow", s=20, edgecolor='k', alpha=0.8)
-    # plt.subplot(1, 2, 2)
-    # plt.scatter(X_kpca_1[y_1 == 0, 0], X_kpca_1[y_1 == 0, 1], c="red", s=20, edgecolor='k', alpha=0.8)
-    # plt.scatter(X_kpca_1[y_1 == 1, 0], X_kpca_1[y_1 == 1, 1], c="blue", s=20, edgecolor='k', alpha=0.8)
-    # plt.scatter(X_kpca_1[y_1 == 2, 0], X_kpca_1[y_1 == 2, 1], c="yellow", s=20, edgecolor='k', alpha=0.8)
-    # plt.show()
+    # Section:
+    # data set - 3 circles
+    plt.figure()
+    X_11, y_11 = make_circles(n_samples=400, factor=.1, noise=.05)
+    X_1 = np.concatenate((X_1, X_11[y_11 == 1, :]), axis=0)
+    y_11[y_11 == 1] = 2
+    y_1 = np.concatenate((y_1, y_11[y_11 == 2]), axis=0)
+    X_kpca_1 = kpca_1.get_projection(X_1)
 
-    # plot feature space
-    from mpl_toolkits.mplot3d import Axes3D
+    # plot original data
+    plt.scatter(X_1[y_1 == 0, 0], X_1[y_1 == 0, 1], c="blue", s=20, edgecolor='k', alpha=0.5)
+    plt.scatter(X_1[y_1 == 1, 0], X_1[y_1 == 1, 1], c="green", s=20, edgecolor='k', alpha=0.5)
+    plt.scatter(X_1[y_1 == 2, 0], X_1[y_1 == 2, 1], c="red", s=20, edgecolor='k', alpha=0.5)
+    plt.xlabel("$x_1$")
+    plt.ylabel("$x_2$")
+    plt.show()
+
+    # plot feature space phi
     fig = plt.figure()
     ax = Axes3D(fig)
     z = sum(kpca_1.kernel.get_kernel(X_1))
     ax.scatter(X_1[:, 0], X_1[:, 1], z, c=y_1, cmap=plt.cm.rainbow)
     plt.show()
+
+    # plot kPCA projection onto first 2 principal components
+    plt.figure()
+    plt.subplot(1, 2, 1)
+    plt.scatter(X_kpca_1[y_1 == 0, 0], X_kpca_1[y_1 == 0, 1], c="blue", s=20, edgecolor='k', alpha=0.5)
+    plt.scatter(X_kpca_1[y_1 == 1, 0], X_kpca_1[y_1 == 1, 1], c="green", s=20, edgecolor='k', alpha=0.5)
+    plt.scatter(X_kpca_1[y_1 == 2, 0], X_kpca_1[y_1 == 2, 1], c="red", s=20, edgecolor='k', alpha=0.5)
+    plt.title("Projection by KPCA")
+    plt.xlabel("1st principal component in space induced by $\phi$")
+    plt.ylabel("2nd component")
+
+    # plot PCA projection onto first 2 principal components
+    plt.subplot(1, 2, 2)
+    pca = PCA()
+    X_pca = pca.fit_transform(X_1)
+    plt.scatter(X_pca[y_1 == 0, 0], X_pca[y_1 == 0, 1], c="blue", s=20, edgecolor='k', alpha=0.5)
+    plt.scatter(X_pca[y_1 == 1, 0], X_pca[y_1 == 1, 1], c="green", s=20, edgecolor='k', alpha=0.5)
+    plt.scatter(X_pca[y_1 == 2, 0], X_pca[y_1 == 2, 1], c="red", s=20, edgecolor='k', alpha=0.5)
+    plt.title("Projection by PCA")
+    plt.xlabel("1st principal component")
+    plt.ylabel("2nd component")
+    plt.show()
+
+
 
     # # example with swiss roll
     # from sklearn.datasets.samples_generator import make_swiss_roll
